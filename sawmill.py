@@ -65,7 +65,7 @@ __all__ = [
     'CLF_COLUMNS',
 ]
 
-CLF_COLUMNS = ("ip","ident","authuser","date","request","status","bytes")
+CLF_COLUMNS = ("ip","ident","authuser","date","tz","request","status","bytes")
 
 # =============================================================================
 # Sources
@@ -336,12 +336,16 @@ def http_log(logdir, filter='access.log'):
     Get your system webserver CLF logs, with a find filter on filenames.
     '''
     file_list = find(files(listdir(logdir)), filter)
-    return columns(
+    column_data = columns(
         clever_cat(file_list),
         "",
         CLF_COLUMNS,
         splitter_type = "shlex"
     )
+    for item in column_data:
+        item['date'] = " ".join(item['date'],item['tz'])
+        del item['tz']
+        yield item
 
 def apache2(logdir='/var/log/apache2', filter='access.log'):
     '''
