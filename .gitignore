@@ -35,4 +35,4 @@ nosetests.xml
 .pydevproject
 
 # Vim
-.sw[op]
+*.sw[op]
