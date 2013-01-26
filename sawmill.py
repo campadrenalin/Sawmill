@@ -343,7 +343,7 @@ def http_log(logdir, filter='access.log'):
         splitter_type = "shlex"
     )
     for item in column_data:
-        item['date'] = " ".join(item['date'],item['tz'])
+        item['date'] = " ".join((item['date'],item['tz']))
         del item['tz']
         yield item
 
