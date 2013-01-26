@@ -294,7 +294,7 @@ def top_frequency(freq_dict, limit=None, ascending=False):
     '''
     Turn a frequency dict into a (key, value) stream of highest-value elements.
     '''
-    sortlist = sorted(freq.iteritems(), key=lambda x:x[1], reverse=True)
+    sortlist = sorted(freq_dict.iteritems(), key=lambda x:x[1], reverse=True)
     if limit != None:
         sortlist = sortlist[:limit]
     for item in sortlist:
