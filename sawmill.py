@@ -330,8 +330,10 @@ def http_log(logdir, filter='access.log'):
     '''
     file_list = find(files(listdir(logdir)), filter)
     return columns(
-        clever_cat(file_list, splitter_type="shlex"),
-        CLF_COLUMNS
+        clever_cat(file_list),
+        "",
+        CLF_COLUMNS,
+        splitter_type = "shlex"
     )
 
 def apache2(logdir='/var/log/apache2', filter='access.log'):
