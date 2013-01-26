@@ -21,6 +21,37 @@ import gzip
 import shlex, subprocess
 import os, os.path
 
+# All publicly-accessible functions
+
+__all__ = [
+
+    # Sources
+    'cat',
+    'gzcat',
+    'system',
+    'system_stdout',
+    'listdir',
+    'listdirs',
+
+    # Filters
+    'once',
+    'grep',
+    'find',
+    'dig',
+    'columns',
+    'files',
+    'dirs',
+
+    # Sinks
+    'write',
+    'count',
+    'frequency',
+    'print_frequency',
+
+    # Utility
+    'is_filelike',
+]
+
 # =============================================================================
 # Sources
 # =============================================================================
@@ -155,6 +186,27 @@ def dig(source, category, dictstyle=True):
         for item in source:
             yield getattr(item, category)
 
+def columns(source, sep, column_names):
+    '''
+    Turn columnized string data into dicts.
+
+    >>> data = [
+    ...     "a b c",
+    ...     "x y z",
+    ... ]
+    >>> list(columns(data, " ", ('Left', None, 'Right')))
+    [{'Left':'a','Right':'c'},{'Left':'x','Right':'z'}]
+    '''
+    for item in source:
+        column_values = item.split(sep)
+        output_dict = {}
+        for i in range(len(column_names)):
+            name = column_names[i]
+            value = column_values[i]
+            if name != None:
+                output_dict[name] = value
+        yield output_dict
+
 def files(source):
     '''
     Takes a series of paths, and only passes on the ones that point to files.
@@ -183,6 +235,43 @@ def write(source, filename):
     with open(filename, 'w') as fileobj:
         for item in source:
             f.write(str(item) + "\n")
+
+def count(source):
+    '''
+    Return the number of items in the source.
+    '''
+    result = 0
+    for item in source:
+        result += 1
+    return result
+
+def frequency(source):
+    '''
+    Tally for each item in source, returning final count at the end.
+    '''
+    counts = {}
+    for item in source:
+        if not item in counts:
+            counts[item] = 0
+        counts[item] += 1
+    return counts
+
+def print_frequency(source, limit=None):
+    '''
+    Print frequency chart.
+    '''
+    freq = frequency(source)
+    sortlist = sorted(freq.iteritems(), key=lambda x:x[1], reverse=True)
+    if limit != None:
+        sortlist = sortlist[:limit]
+
+    count_width = 5 # "count" is 5 letters
+    if sortlist:
+        count_width = max(5, len(str(sortlist[0][1]))) # First count is highest
+    yield "count" + (" " * (count_width - 4 )) + "value"
+    yield "=" * (count_width + 6)
+    for value, total in sortlist:
+        yield " " * (count_width - len(str(total))) + str(total) + " " + repr(value)
 
 # =============================================================================
 # Utility
