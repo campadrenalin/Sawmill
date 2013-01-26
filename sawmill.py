@@ -60,9 +60,12 @@ __all__ = [
     # Utility
     'is_filelike',
     'forever',
+
+    # Constants
+    'CLF_COLUMNS',
 ]
 
-NGINX_COLUMNS = ("ip","ident","authuser","date","request","status","bytes")
+CLF_COLUMNS = ("ip","ident","authuser","date","request","status","bytes")
 
 # =============================================================================
 # Sources
