@@ -94,9 +94,13 @@ def gzcat(source):
             for line in item:
                 yield line
             
-        with gzip.GzipFile(item, 'r') as fileobj:
+        # Thanks to old versions of gzip, can't use "with" statement
+        try:
+            fileobj = gzip.GzipFile(item, 'r')
             for line in fileobj:
                 yield line
+        finally:
+            fileobj.close()
 
 def system(source):
     '''
