@@ -39,6 +39,7 @@ __all__ = [
     'find',
     'dig',
     'columns',
+    'uncolumns',
     'files',
     'dirs',
 
@@ -46,11 +47,22 @@ __all__ = [
     'write',
     'count',
     'frequency',
+    'top_frequency',
     'print_frequency',
+
+    # Recipes
+    'clever_cat',
+    'http_log',
+    'apache2',
+    'nginx',
+    'highest_pageviews',
 
     # Utility
     'is_filelike',
+    'forever',
 ]
+
+NGINX_COLUMNS = ("ip","ident","authuser","date","request","status","bytes")
 
 # =============================================================================
 # Sources
@@ -186,7 +198,7 @@ def dig(source, category, dictstyle=True):
         for item in source:
             yield getattr(item, category)
 
-def columns(source, sep, column_names):
+def columns(source, sep, column_names, splitter_type='split'):
     '''
     Turn columnized string data into dicts.
 
@@ -197,15 +209,30 @@ def columns(source, sep, column_names):
     >>> list(columns(data, " ", ('Left', None, 'Right')))
     [{'Left':'a','Right':'c'},{'Left':'x','Right':'z'}]
     '''
+    num_columns = len(column_names)
+    if splitter_type == "split":
+        splitter = lambda x: x.split(sep, maxsplit=num_columns)
+    elif splitter_type == "shlex":
+        splitter = lambda x: shlex.split(x)
+    else:
+        raise ValueError("Unrecognized splitting mechanism", splitter_type)
+
     for item in source:
-        column_values = item.split(sep)
+        column_values = splitter(item)
         output_dict = {}
-        for i in range(len(column_names)):
+        for i in range(num_columns):
             name = column_names[i]
             value = column_values[i]
             if name != None:
                 output_dict[name] = value
         yield output_dict
+
+def uncolumns(source, sep, column_names):
+    '''
+    Turn dict items into columnized strings.
+    '''
+    for item in source:
+        yield sep.join(item[name] for name in column_names)
 
 def files(source):
     '''
@@ -256,14 +283,22 @@ def frequency(source):
         counts[item] += 1
     return counts
 
+def top_frequency(freq_dict, limit=None, ascending=False):
+    '''
+    Turn a frequency dict into a (key, value) stream of highest-value elements.
+    '''
+    sortlist = sorted(freq.iteritems(), key=lambda x:x[1], reverse=True)
+    if limit != None:
+        sortlist = sortlist[:limit]
+    for item in sortlist:
+        yield item
+
 def print_frequency(source, limit=None):
     '''
     Print frequency chart.
     '''
     freq = frequency(source)
-    sortlist = sorted(freq.iteritems(), key=lambda x:x[1], reverse=True)
-    if limit != None:
-        sortlist = sortlist[:limit]
+    sortlist = top_frequency(freq, limit)
 
     count_width = 5 # "count" is 5 letters
     if sortlist:
@@ -274,8 +309,62 @@ def print_frequency(source, limit=None):
         yield " " * (count_width - len(str(total))) + str(total) + " " + repr(value)
 
 # =============================================================================
+# Recipes
+# =============================================================================
+
+def clever_cat(source):
+    '''
+    Determine wrapper format by filename and delegate to correct cat generator.
+    '''
+    for path in source:
+        if path.endswith('.gz'):
+            cat_generator = gzcat
+        else:
+            cat_generator = cat
+        for line in cat_generator((path)):
+            yield line
+
+def http_log(logdir, filter='access.log'):
+    '''
+    Get your system webserver CLF logs, with a find filter on filenames.
+    '''
+    file_list = find(files(listdir(logdir)), filter)
+    return columns(
+        clever_cat(file_list, splitter_type="shlex"),
+        CLF_COLUMNS
+    )
+
+def apache2(logdir='/var/log/apache2', filter='access.log'):
+    '''
+    Get your system apache2 logs, with a find filter on filenames.
+    '''
+    return http_log(logdir, filter)
+
+def nginx(logdir='/var/log/nginx', filter='access.log'):
+    '''
+    Get your system nginx logs, with a find filter on filenames.
+    '''
+    return http_log(logdir, filter)
+
+def highest_pageviews(source, limit=10):
+    '''
+    Takes items that are Common Log Format dicts, returns a frequency analysis
+    of the request lines.
+    '''
+    return top_frequency(frequency(dig(source, 'request')), limit=limit)
+
+# =============================================================================
 # Utility
 # =============================================================================
 
 def is_filelike(item):
     return hasattr(item, 'read') and hasattr(item, 'write')
+
+def forever(callback):
+    '''
+    A generator that refills from the same callback after each exhaustion.
+    '''
+    while True:
+        internal_gen = callback()
+        for item in internal_gen:
+            yield item
