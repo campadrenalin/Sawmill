@@ -324,7 +324,7 @@ def clever_cat(source):
             cat_generator = gzcat
         else:
             cat_generator = cat
-        for line in cat_generator((path)):
+        for line in cat_generator((path,)):
             yield line
 
 def http_log(logdir, filter='access.log'):
